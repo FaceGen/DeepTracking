@@ -1,0 +1,6 @@
+[requires]
+Caffe/1.0.0@deepglint/stable
+Proto/1.0.0@deepglint/stable
+
+[generators]
+cmake

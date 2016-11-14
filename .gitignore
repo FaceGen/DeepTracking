@@ -1,0 +1,14 @@
+bin/
+build/
+lfs/
+lib/
+model/
+output/
+release/
+.cproject
+.project
+*~
+*/*~
+*/*/*~
+*.tar
+
