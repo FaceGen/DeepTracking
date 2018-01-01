@@ -11,7 +11,7 @@
 STC_MOT_Tracker::STC_MOT_Tracker() {
 	// set parameters
 	display_config_ = false;
-	profile_time_ = false;
+	profile_time_ = true;
 	min_intersection = 50;
 	track_size_ = 20;
 	min_box_size_ = 5;
@@ -25,7 +25,7 @@ STC_MOT_Tracker::STC_MOT_Tracker() {
 	vehicle_pic_size_.width = 100;
 	// constant parameters
 	pi_ = 3.141592653;
-	pyr_size_ = 5;
+	pyr_size_ = 1;
 	tracker_base_size_h_ = 240;
 	tracker_base_size_w_ = 320;
 	// initialization
@@ -61,6 +61,7 @@ void STC_MOT_Tracker::Update(const Mat &img, const unsigned long &frm_id,
 		const bool &is_key_frame, const vector<Rect> &det_box,
 		const vector<unsigned char> &det_type, TrackingResult &result) {
 	// copy inputs to local storage
+
 	TFrame new_frame;
 	new_frame.frm_id = frm_id;
 	new_frame.img_w = img.cols;
@@ -69,13 +70,20 @@ void STC_MOT_Tracker::Update(const Mat &img, const unsigned long &frm_id,
 	Size new_size;
 	new_size.width = tracker_base_size_w_;
 	new_size.height = tracker_base_size_h_;
+	t_profiler_.reset();
 	for (int i = 0; i < pyr_size_; i++) {
 		Mat new_rgb;
+
+//		cout<<"origin"<<img.cols<<" "<<img.rows<<endl;
 		resize(img, new_rgb, new_size, 0, 0, CV_INTER_LINEAR);
+//		cout<<"new"<<new_size.height<<" "<<new_size.width<<endl;
+
 		new_size.width = new_size.width * 0.75;
 		new_size.height = new_size.height * 0.75;
 		new_frame.img_pyr.push_back(new_rgb);
 	}
+	t_profiler_str_ = "pyr Resize";
+	t_profiler_.update(t_profiler_str_);
 	frame_.push_back(new_frame);
 	// clear result
 	result.clear();
@@ -85,7 +93,7 @@ void STC_MOT_Tracker::Update(const Mat &img, const unsigned long &frm_id,
 				frame_[frame_.size() - 1].frm_id);
 		printf("track update\n");
 	}
-	t_profiler_.reset();
+
 
 	if (frame_.size() > 1)
 		track_foreward();
@@ -909,33 +917,96 @@ void STCTracker::getCxtPriorPosteriorModel(const Mat image) {
 	cxtPriorPro = cxtPriorPro.mul(image);
 	cxtPosteriorPro.convertTo(cxtPosteriorPro, -1, 1.0 / sum_post);
 }
+
+void STCTracker::FDFT_inplace(Mat& matin){
+	dft(matin, matin);
+}
+void STCTracker::BDFT(Mat& matin,Mat& matout){
+	dft(matin, matout, DFT_INVERSE | DFT_REAL_OUTPUT | DFT_SCALE);
+}
+
+
+//void STCTracker::FDFT_inplace(Mat& matin){
+//
+//
+//	fftw_complex *in;
+//	fftw_plan p;
+//
+////	Mat A_single;
+////	matin.convertTo(A_single,CV_32FC2,1,0);
+//
+//	in = (fftw_complex*) matin.data;
+//
+//	p = fftw_plan_dft_2d(matin.rows, matin.cols, in, in, FFTW_FORWARD, FFTW_ESTIMATE);
+//	fftw_execute(p);
+////	A_single.convertTo(matin,CV_64FC2,1,0);
+//	fftw_destroy_plan(p);
+//}
+//
+//
+//void STCTracker::BDFT(Mat& matin,Mat& matout){
+//	fftw_complex *in,*out;
+//	fftw_plan p;
+////	Mat in_single_mat,
+//	Mat out_single_mat;
+////	matin.convertTo(in_single_mat,CV_32FC2,1,0);
+//	out_single_mat=Mat::zeros(matin.size(),CV_64FC2);
+//
+//	in = (fftw_complex*) matin.data;
+//	out= (fftw_complex*) out_single_mat.data;
+//	p = fftw_plan_dft_2d(matin.rows, matin.cols, in, out, FFTW_BACKWARD, FFTW_ESTIMATE);
+//	fftw_execute(p);
+//
+//	vector < Mat > planes;
+//	split(out_single_mat, planes);
+//	planes[0].convertTo(matout,CV_64FC1,1.0/matin.rows/matin.cols,0);
+//
+//	fftw_destroy_plan(p);
+//}
+
+
 // Learn Spatio-Temporal Context Model
 void STCTracker::learnSTCModel(const Mat image) {
+	t_profiler_2.reset();
+
 	// step 1: Get context prior and posterior probability
 	getCxtPriorPosteriorModel(image);
+	cout<<"cxtPriorPro.size()"<<cxtPriorPro.size().height<<" "<<cxtPriorPro.size().width<<endl;
+	prof_str="getModel";
+	t_profiler_2.update(prof_str);
 
 	// step 2-1: Execute 2D DFT for prior probability
 	Mat priorFourier;
 	Mat planes1[] = { cxtPriorPro, Mat::zeros(cxtPriorPro.size(), CV_64F) };
 	merge(planes1, 2, priorFourier);
-	dft(priorFourier, priorFourier);
+	prof_str="Merge";
+	t_profiler_2.update(prof_str);
 
+
+	FDFT_inplace(priorFourier);
+	prof_str="First Dft";
+	t_profiler_2.update(prof_str);
 	// step 2-2: Execute 2D DFT for posterior probability
 	Mat postFourier;
 	Mat planes2[] = { cxtPosteriorPro, Mat::zeros(cxtPosteriorPro.size(),
 			CV_64F) };
 	merge(planes2, 2, postFourier);
-	dft(postFourier, postFourier);
-
+	FDFT_inplace(postFourier);
+	prof_str="Second Dft";
+	t_profiler_2.update(prof_str);
 	// step 3: Calculate the division
 	Mat conditionalFourier;
 	complexOperation(postFourier, priorFourier, conditionalFourier, 1);
 
 	// step 4: Execute 2D inverse DFT for conditional probability and we obtain STCModel
-	dft(conditionalFourier, STModel, DFT_INVERSE | DFT_REAL_OUTPUT | DFT_SCALE);
-
+	BDFT(conditionalFourier, STModel);
+	prof_str="Three Dft";
+	t_profiler_2.update(prof_str);
 	// step 5: Use the learned spatial context model to update spatio-temporal context model
 	addWeighted(STCModel, 1.0 - rho, STModel, rho, 0.0, STCModel);
+	prof_str="Weight done";
+	t_profiler_2.update(prof_str);
+	LOG(INFO) << t_profiler_2.getSmoothedTimeProfileString();
 }
 // Initialize the hyper parameters and models
 void STCTracker::init(const Mat frame, const Rect inbox, const float resize_rto,
@@ -946,6 +1017,7 @@ void STCTracker::init(const Mat frame, const Rect inbox, const float resize_rto,
 	box.y = inbox.y * resize_rto;
 	box.width = inbox.width * resize_rto;
 	box.height = inbox.height * resize_rto;
+
 	Rect boxRegion;
 	FrameNum = 1;
 	resize_rto_ = resize_rto;
@@ -1034,15 +1106,19 @@ void STCTracker::tracking(const Mat frame, Rect &in_out_trackBox) {
 
 	// step 2-1: Execute 2D DFT for prior probability
 	Mat priorFourier;
+	cout<<"box"<<cxtPriorPro.rows<<" "<<cxtPriorPro.cols<<endl;
 	Mat planes1[] = { cxtPriorPro, Mat::zeros(cxtPriorPro.size(), CV_64F) };
 	merge(planes1, 2, priorFourier);
-	dft(priorFourier, priorFourier);
+	FDFT_inplace(priorFourier);
 
 	// step 2-2: Execute 2D DFT for conditional probability
 	Mat STCModelFourier;
 	Mat planes2[] = { STCModel, Mat::zeros(STCModel.size(), CV_64F) };
 	merge(planes2, 2, STCModelFourier);
-	dft(STCModelFourier, STCModelFourier);
+
+
+//	dft(STCModelFourier,STCModelFourier);
+	FDFT_inplace(STCModelFourier);
 
 	// step 3: Calculate the multiplication
 	Mat postFourier;
@@ -1050,7 +1126,7 @@ void STCTracker::tracking(const Mat frame, Rect &in_out_trackBox) {
 
 	// step 4: Execute 2D inverse DFT for posterior probability namely confidence map
 	Mat confidenceMap;
-	dft(postFourier, confidenceMap, DFT_INVERSE | DFT_REAL_OUTPUT | DFT_SCALE);
+	BDFT(postFourier, confidenceMap);
 
 	// step 5: Find the max position
 	Point point;

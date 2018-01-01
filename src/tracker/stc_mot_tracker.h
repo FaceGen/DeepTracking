@@ -13,9 +13,10 @@
 #include <stdio.h>
 #include <opencv2/opencv.hpp>
 #include "util/timing_profiler.h"
-
+#include "fftw3.h"
 using namespace std;
-using namespace cv;
+using namespace cv::gpu;
+//using namespace cv;
 
 // -------------------------------------- Binary Matching -----------------------------------------------------
 #define MAX_MATCHING_NUM 101
@@ -55,7 +56,11 @@ private:
 	void getCxtPriorPosteriorModel(const Mat image);
 	void learnSTCModel(const Mat image);
 	float linefit(const int &y);
+	void FDFT_inplace(Mat& matin);
+	void BDFT(Mat& matin,Mat& matout);
 private:
+	timing_profiler t_profiler_2;
+	string prof_str;
 	float line_k;
 	float line_b;
 	float resize_rto_;
@@ -173,6 +178,7 @@ private:
 	// record time cost
 	string t_profiler_str_;
 	timing_profiler t_profiler_;
+
 	// for binary matching use
 	BinaryMatching matching_;
 	float graph_[MAX_MATCHING_NUM][MAX_MATCHING_NUM];
