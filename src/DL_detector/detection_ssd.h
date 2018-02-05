@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 #include <cassert>
+
 #include "caffe/caffe.hpp"
 #include "util/timing_profiler.h"
 

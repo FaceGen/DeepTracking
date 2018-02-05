@@ -11,4 +11,8 @@ release/
 */*~
 */*/*~
 *.tar
-
+.DS_Store
+.idea/
+.run.sh.swp
+.settings/
+cmake-build-debug/

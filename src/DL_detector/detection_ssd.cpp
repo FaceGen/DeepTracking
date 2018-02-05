@@ -81,7 +81,8 @@ DetectionSSD::DetectionSSD(const DetectionType &dt) {
 	input_geometry_.width = input_width;
 	input_layer_->Reshape(batch_size_, num_channels_, input_geometry_.height,
 			input_geometry_.width);
-	const vector<shared_ptr<Layer<float> > >& layers = net_->layers();
+
+	const vector< caffe::shared_ptr< caffe::Layer<float> > >& layers = net_->layers();
 	const vector<vector<Blob<float>*> >& bottom_vecs = net_->bottom_vecs();
 	const vector<vector<Blob<float>*> >& top_vecs = net_->top_vecs();
 	for (int i = 0; i < layers.size(); ++i)

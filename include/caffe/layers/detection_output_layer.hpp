@@ -1,8 +1,8 @@
 #ifndef CAFFE_DETECTION_OUTPUT_LAYER_HPP_
 #define CAFFE_DETECTION_OUTPUT_LAYER_HPP_
 
-#include <boost/property_tree/json_parser.hpp>
-#include <boost/property_tree/ptree.hpp>
+//#include <boost/property_tree/json_parser.hpp>
+//#include <boost/property_tree/ptree.hpp>
 #include <boost/regex.hpp>
 
 #include <map>
@@ -16,7 +16,7 @@
 #include "caffe/proto/caffe.pb.h"
 #include "caffe/util/bbox_util.hpp"
 
-using namespace boost::property_tree;  // NOLINT(build/namespaces)
+//using namespace boost::property_tree;  // NOLINT(build/namespaces)
 
 namespace caffe {
 
@@ -81,12 +81,14 @@ class DetectionOutputLayer : public Layer<Dtype> {
   bool variance_encoded_in_target_;
   int keep_top_k_;
   float confidence_threshold_;
-
+  vector<float> thresholds_;
   int num_;
   int num_priors_;
 
+  bool need_nms_;
   float nms_threshold_;
   int top_k_;
+  float eta_;
 
   bool need_save_;
   string output_directory_;
@@ -99,11 +101,15 @@ class DetectionOutputLayer : public Layer<Dtype> {
   int num_test_image_;
   int name_count_;
 
-  ptree detections_;
+  //ptree detections_;
 
   bool visualize_;
   float visualize_threshold_;
   shared_ptr<DataTransformer<Dtype> > data_transformer_;
+  string save_file_;
+  Blob<Dtype> bbox_preds_;
+  Blob<Dtype> bbox_permute_;
+  Blob<Dtype> conf_permute_;
 };
 
 }  // namespace caffe

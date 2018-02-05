@@ -1,6 +1,4 @@
 [requires]
-Dgcaffe/0.3.6.3@deepglint/stable_cuda_8.0
-Protobuf/3.0.0@deepglint/stable
-
+Protobuf/3.0.0@deepglint/ubuntu1604
 [generators]
 cmake
