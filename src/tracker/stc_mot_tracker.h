@@ -205,7 +205,7 @@ private:
 			const vector<Rect> &det_box,
 			const vector<Rect> &accuracy_original_det_box);
 	void smooth_update_vehicle_location(const int &last_key_frame_offset,
-			const unsigned long &v_id, const Rect &new_loc);
+			const unsigned long &v_id, const Rect &new_loc,const Rect &accuracy_new_loc);
 	void add_new_vehicle(vector<Rect> &det_box,
 			const vector<unsigned char> &det_type,
 			const vector<Rect> &accuracy_original_det_box);

@@ -113,16 +113,16 @@ int main(int argn, char **arg) {
 	timing_profiler t_profiler_;
 	string t_profiler_str_;
 
-	if(argn <2){
-		cout<<"Need dataset num."<<endl;
-		exit(0);
-	}
+//	if(argn <2){
+//		cout<<"Need dataset num."<<endl;
+//		exit(0);
+//	}
 	string test_name(arg[1]);
 
 	string datasetname = "testn"+test_name;
 	// read video
-//	DataReader* data_reader = new VideoDataReader(datasetname + ".mp4");
-	DataReader* data_reader = new ImagelistDataReader("images_all/n"+test_name+".list");
+	DataReader* data_reader = new VideoDataReader("/home/liuhao/workspace/1_dgvehicle/LHTracking/data/"+test_name + ".mp4");
+//	DataReader* data_reader = new ImagelistDataReader("images_all/n"+test_name+".list");
 	if (!data_reader->isOpened()) {
 		printf("Error: data reader can not open.\n");
 		return -1;

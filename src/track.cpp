@@ -157,7 +157,7 @@ int main(int argn, char **arg) {
 	string t_profiler_str_;
 	map<int, vector<DetectObject> > detect_result;
 
-	read_detection_result("detect_gd_" + test_name, detect_result);
+	read_detection_result("detect_" + test_name, detect_result);
 
 
 	if (!data_reader->isOpened()) {
@@ -194,8 +194,8 @@ int main(int argn, char **arg) {
 			printf("Image done.\n");
 			break;
 		}
-		if(frame_cnt>32)
-			break;
+//		if(frame_cnt>32)
+//			break;
 //		if (!capture.read(frame)) {
 //			printf("Error: can not read video frames.\n");
 //			return -1;

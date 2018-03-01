@@ -150,7 +150,7 @@ void STC_MOT_Tracker::process_key_frame(const vector<Rect> &in_det_box,
 		printf("\n");
 	}
 	if (last_key_frame_offset >= 0)
-		update_vehicle_location(last_key_frame_offset, det_box,in_det_box);
+		update_vehicle_location(last_key_frame_offset, det_box, in_det_box);
 	if (display_config_) {
 		printf("**track:\n");
 		for (int v_idx = 0; v_idx < frame_[frame_.size() - 1].obj.size();
@@ -164,7 +164,7 @@ void STC_MOT_Tracker::process_key_frame(const vector<Rect> &in_det_box,
 	save_matched_low_score_tracker();
 	degrade_unmatched_new_detection();
 	delete_low_score_tracker();
-	add_new_vehicle(det_box, det_type,in_det_box);
+	add_new_vehicle(det_box, det_type, in_det_box);
 	if (display_config_) {
 		if (frame_.size() > 1)
 			printf("previous V num %lu\n",
@@ -217,21 +217,21 @@ void STC_MOT_Tracker::activate_status(int last_key_frame_offset,
 				float w_rto = 1.0 * frame_[offset].img_w / tracker_base_size_w_;
 				float h_rto = 1.0 * frame_[offset].img_h / tracker_base_size_h_;
 				Rect& acc_loc = frame_[offset].obj[i].accuracy_original_location;
-				if (acc_loc.x != 0 || acc_loc.y != 0 || acc_loc.width != 0
-						|| acc_loc.height != 0) {
-					sgl_obj_result.loc = acc_loc;
-				} else {
-					sgl_obj_result.loc.x = max(1,
-							(int) (w_rto * frame_[offset].obj[i].loc.x));
-					sgl_obj_result.loc.y = max(1,
-							(int) (h_rto * frame_[offset].obj[i].loc.y));
-					sgl_obj_result.loc.width = min(
-							(int) (w_rto * frame_[offset].obj[i].loc.width),
-							frame_[offset].img_w - sgl_obj_result.loc.x - 1);
-					sgl_obj_result.loc.height = min(
-							(int) (h_rto * frame_[offset].obj[i].loc.height),
-							frame_[offset].img_h - sgl_obj_result.loc.y - 1);
-				}
+//				if (acc_loc.x != 0 || acc_loc.y != 0 || acc_loc.width != 0
+//						|| acc_loc.height != 0) {
+				sgl_obj_result.loc = acc_loc;
+//				} else {
+//					sgl_obj_result.loc.x = max(1,
+//							(int) (w_rto * frame_[offset].obj[i].loc.x));
+//					sgl_obj_result.loc.y = max(1,
+//							(int) (h_rto * frame_[offset].obj[i].loc.y));
+//					sgl_obj_result.loc.width = min(
+//							(int) (w_rto * frame_[offset].obj[i].loc.width),
+//							frame_[offset].img_w - sgl_obj_result.loc.x - 1);
+//					sgl_obj_result.loc.height = min(
+//							(int) (h_rto * frame_[offset].obj[i].loc.height),
+//							frame_[offset].img_h - sgl_obj_result.loc.y - 1);
+//				}
 				sgl_obj_result.obj_id = frame_[offset].obj[i].obj_id;
 				sgl_obj_result.score = frame_[offset].obj[i].vehicle_pic_score;
 				sgl_obj_result.type = frame_[offset].obj[i].type;
@@ -601,7 +601,7 @@ void STC_MOT_Tracker::update_vehicle_location(const int &last_key_frame_offset,
 				&& (graph_[v_idx + 1][match_pair_[v_idx] + 1] > 0)) {
 			smooth_update_vehicle_location(last_key_frame_offset,
 					frame_[frame_.size() - 1].obj[v_idx].obj_id,
-					det_box[match_pair_[v_idx]]);
+					det_box[match_pair_[v_idx]],accuracy_original_det_box[match_pair_[v_idx]]);
 			frame_[frame_.size() - 1].obj[v_idx].score = HIGH_SCORE;
 			float dx = 0;
 			float dy = 0;
@@ -643,51 +643,111 @@ void STC_MOT_Tracker::update_vehicle_location(const int &last_key_frame_offset,
 
 void STC_MOT_Tracker::smooth_update_vehicle_location(
 		const int &last_key_frame_offset, const unsigned long &v_id,
-		const Rect &new_loc) {
+		const Rect &new_loc, const Rect &accuracy_new_loc) {
 	int pre_v_idx = find_vehicle(frame_[last_key_frame_offset].obj, v_id);
 	int det_fps = frame_.size() - last_key_frame_offset - 1;
-	float up_left_offset_x = static_cast<float>(1.0
-			* (new_loc.x - frame_[last_key_frame_offset].obj[pre_v_idx].loc.x)
-			/ det_fps);
-	float up_left_offset_y = static_cast<float>(1.0
-			* (new_loc.y - frame_[last_key_frame_offset].obj[pre_v_idx].loc.y)
-			/ det_fps);
-	float low_right_offset_x = static_cast<float>(1.0
-			* (new_loc.x + new_loc.width
-					- frame_[last_key_frame_offset].obj[pre_v_idx].loc.x
-					- frame_[last_key_frame_offset].obj[pre_v_idx].loc.width)
-			/ det_fps);
-	float low_right_offset_y = static_cast<float>(1.0
-			* (new_loc.y + new_loc.height
-					- frame_[last_key_frame_offset].obj[pre_v_idx].loc.y
-					- frame_[last_key_frame_offset].obj[pre_v_idx].loc.height)
-			/ det_fps);
-	for (int frame_offset = frame_.size() - 1;
-			frame_offset > last_key_frame_offset; frame_offset--) {
-		int times = frame_offset - last_key_frame_offset;
-		int v_idx = find_vehicle(frame_[frame_offset].obj, v_id);
-		if (v_idx >= 0) {
-			frame_[frame_offset].obj[v_idx].loc.width =
-					static_cast<int>(frame_[last_key_frame_offset].obj[pre_v_idx].loc.x
-							+ frame_[last_key_frame_offset].obj[pre_v_idx].loc.width
-							+ low_right_offset_x * times);
-			frame_[frame_offset].obj[v_idx].loc.height =
-					static_cast<int>(frame_[last_key_frame_offset].obj[pre_v_idx].loc.y
-							+ frame_[last_key_frame_offset].obj[pre_v_idx].loc.height
-							+ low_right_offset_y * times);
-			frame_[frame_offset].obj[v_idx].loc.x =
-					static_cast<int>(frame_[last_key_frame_offset].obj[pre_v_idx].loc.x
-							+ up_left_offset_x * times);
-			frame_[frame_offset].obj[v_idx].loc.y =
-					static_cast<int>(frame_[last_key_frame_offset].obj[pre_v_idx].loc.y
-							+ up_left_offset_y * times);
-			frame_[frame_offset].obj[v_idx].loc.width =
-					frame_[frame_offset].obj[v_idx].loc.width
-							- frame_[frame_offset].obj[v_idx].loc.x;
-			frame_[frame_offset].obj[v_idx].loc.height =
-					frame_[frame_offset].obj[v_idx].loc.height
-							- frame_[frame_offset].obj[v_idx].loc.y;
-			update_vehicle_pic(frame_[frame_offset].obj[v_idx]);
+
+	{
+		float up_left_offset_x = static_cast<float>(1.0
+				* (new_loc.x
+						- frame_[last_key_frame_offset].obj[pre_v_idx].loc.x)
+				/ det_fps);
+		float up_left_offset_y = static_cast<float>(1.0
+				* (new_loc.y
+						- frame_[last_key_frame_offset].obj[pre_v_idx].loc.y)
+				/ det_fps);
+		float low_right_offset_x =
+				static_cast<float>(1.0
+						* (new_loc.x + new_loc.width
+								- frame_[last_key_frame_offset].obj[pre_v_idx].loc.x
+								- frame_[last_key_frame_offset].obj[pre_v_idx].loc.width)
+						/ det_fps);
+		float low_right_offset_y =
+				static_cast<float>(1.0
+						* (new_loc.y + new_loc.height
+								- frame_[last_key_frame_offset].obj[pre_v_idx].loc.y
+								- frame_[last_key_frame_offset].obj[pre_v_idx].loc.height)
+						/ det_fps);
+		for (int frame_offset = frame_.size() - 1;
+				frame_offset > last_key_frame_offset; frame_offset--) {
+			int times = frame_offset - last_key_frame_offset;
+			int v_idx = find_vehicle(frame_[frame_offset].obj, v_id);
+			if (v_idx >= 0) {
+				frame_[frame_offset].obj[v_idx].loc.width =
+						static_cast<int>(frame_[last_key_frame_offset].obj[pre_v_idx].loc.x
+								+ frame_[last_key_frame_offset].obj[pre_v_idx].loc.width
+								+ low_right_offset_x * times);
+				frame_[frame_offset].obj[v_idx].loc.height =
+						static_cast<int>(frame_[last_key_frame_offset].obj[pre_v_idx].loc.y
+								+ frame_[last_key_frame_offset].obj[pre_v_idx].loc.height
+								+ low_right_offset_y * times);
+				frame_[frame_offset].obj[v_idx].loc.x =
+						static_cast<int>(frame_[last_key_frame_offset].obj[pre_v_idx].loc.x
+								+ up_left_offset_x * times);
+				frame_[frame_offset].obj[v_idx].loc.y =
+						static_cast<int>(frame_[last_key_frame_offset].obj[pre_v_idx].loc.y
+								+ up_left_offset_y * times);
+				frame_[frame_offset].obj[v_idx].loc.width =
+						frame_[frame_offset].obj[v_idx].loc.width
+								- frame_[frame_offset].obj[v_idx].loc.x;
+				frame_[frame_offset].obj[v_idx].loc.height =
+						frame_[frame_offset].obj[v_idx].loc.height
+								- frame_[frame_offset].obj[v_idx].loc.y;
+				update_vehicle_pic(frame_[frame_offset].obj[v_idx]);
+			}
+		}
+	}
+
+	{
+		float up_left_offset_x =
+				static_cast<float>(1.0
+						* (accuracy_new_loc.x
+								- frame_[last_key_frame_offset].obj[pre_v_idx].accuracy_original_location.x)
+						/ det_fps);
+		float up_left_offset_y =
+				static_cast<float>(1.0
+						* (accuracy_new_loc.y
+								- frame_[last_key_frame_offset].obj[pre_v_idx].accuracy_original_location.y)
+						/ det_fps);
+		float low_right_offset_x =
+				static_cast<float>(1.0
+						* (accuracy_new_loc.x + accuracy_new_loc.width
+								- frame_[last_key_frame_offset].obj[pre_v_idx].accuracy_original_location.x
+								- frame_[last_key_frame_offset].obj[pre_v_idx].accuracy_original_location.width)
+						/ det_fps);
+		float low_right_offset_y =
+				static_cast<float>(1.0
+						* (accuracy_new_loc.y + accuracy_new_loc.height
+								- frame_[last_key_frame_offset].obj[pre_v_idx].accuracy_original_location.y
+								- frame_[last_key_frame_offset].obj[pre_v_idx].accuracy_original_location.height)
+						/ det_fps);
+		for (int frame_offset = frame_.size() - 1;
+				frame_offset > last_key_frame_offset; frame_offset--) {
+			int times = frame_offset - last_key_frame_offset;
+			int v_idx = find_vehicle(frame_[frame_offset].obj, v_id);
+			if (v_idx >= 0) {
+				frame_[frame_offset].obj[v_idx].accuracy_original_location.width =
+						static_cast<int>(frame_[last_key_frame_offset].obj[pre_v_idx].accuracy_original_location.x
+								+ frame_[last_key_frame_offset].obj[pre_v_idx].accuracy_original_location.width
+								+ low_right_offset_x * times);
+				frame_[frame_offset].obj[v_idx].accuracy_original_location.height =
+						static_cast<int>(frame_[last_key_frame_offset].obj[pre_v_idx].accuracy_original_location.y
+								+ frame_[last_key_frame_offset].obj[pre_v_idx].accuracy_original_location.height
+								+ low_right_offset_y * times);
+				frame_[frame_offset].obj[v_idx].accuracy_original_location.x =
+						static_cast<int>(frame_[last_key_frame_offset].obj[pre_v_idx].accuracy_original_location.x
+								+ up_left_offset_x * times);
+				frame_[frame_offset].obj[v_idx].accuracy_original_location.y =
+						static_cast<int>(frame_[last_key_frame_offset].obj[pre_v_idx].accuracy_original_location.y
+								+ up_left_offset_y * times);
+				frame_[frame_offset].obj[v_idx].accuracy_original_location.width =
+						frame_[frame_offset].obj[v_idx].accuracy_original_location.width
+								- frame_[frame_offset].obj[v_idx].accuracy_original_location.x;
+				frame_[frame_offset].obj[v_idx].accuracy_original_location.height =
+						frame_[frame_offset].obj[v_idx].accuracy_original_location.height
+								- frame_[frame_offset].obj[v_idx].accuracy_original_location.y;
+				update_vehicle_pic(frame_[frame_offset].obj[v_idx]);
+			}
 		}
 	}
 }
